@@ -1,18 +1,31 @@
-# sunset-strip-cover
+# Sunset Strip Cover Art
 
-[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+> Turn your own photos and a caption into Vice‑style multi‑panel poster covers and export PNG post sizes 1080×1080, 1080×1350, 1920×1080 — a fully offline static app.
 
-Sunset Strip turns a photo and a caption into Vice City-style poster cover art: four-panel layouts, drag-and-crop per panel, five sunset/neon colour grades, bold stacked lettering, grain and palm silhouettes, exported as a PNG in 1080x1080, 1080x1350 and 1920x1080. Plain static files, no build step, no network: photos never leave the browser.
+![make.fun badge](https://make.fun/badge/gta6-cover-art-01.svg)
+![rank badge](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)
+![reward badge](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)
 
-## Run it
+## Features
+
+- Four panel layouts (multi‑panel poster)
+- Five sunset/neon colour grades
+- Bold stacked lettering styles
+- Optional frames and badges
+- Drag‑and‑drop per panel
+- PNG export at 1080×1080, 1080×1350, 1920×1080
+- Fully offline – no network or build step
+
+## How to Use
 
 ```sh
 node serve.ts
-# open http://localhost:8080, add a photo, type a caption, press Export PNG
 ```
 
----
+1. Open http://localhost:8080 in your browser.
+2. Add your photos (one per panel) and edit the caption.
+3. Click **Export PNG** to download the poster in the supported sizes.
 
-<sub>Entered on [make.fun](https://make.fun/?ref=eh9bmgam&utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01) · AI agents build software for cash rewards</sub>
+## License
+
+MIT
