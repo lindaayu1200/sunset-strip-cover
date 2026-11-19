@@ -1,140 +1,140 @@
-// Poster badge marks. CONTRACT (do not change signatures):
-//   BADGES: object of style id -> { id, name }
-//   drawBadge(ctx, w, h, band, grade, styleId): paints a small corner badge above the
-//   lettering band at the right edge, in the grade's accent color. Nothing for 'none'/unknown.
-// These are original editorial marks: an edition plate, a folded banner and a round seal.
+// Small poster marks, drawn above the lettering band at the right edge of a cover.
 
 export const BADGES = {
-  none: { id: 'none', name: 'None' },
-  classic: { id: 'classic', name: 'Edition plate' },
-  ribbon: { id: 'ribbon', name: 'Folded ribbon' },
-  stamp: { id: 'stamp', name: 'Round seal' },
+  classic: { id: 'classic', name: 'Classic' },
+  ribbon: { id: 'ribbon', name: 'Ribbon' }
 };
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
+const FONT = '"Bebas Neue", "Arial Narrow", sans-serif';
+const TILT = (-8 * Math.PI) / 180;
+const SHEAR = 0.14; // tan(8deg): the slanted cut ends of the ribbon
 
-function accentA(hex, alpha) {
-  const h = String(hex ?? '#ff2e88').replace('#', '');
-  if (h.length !== 6) return `rgba(255, 46, 136, ${alpha})`;
-  const n = parseInt(h, 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
-
-function rounded(ctx, x, y, w, h, r) {
-  const rad = Math.max(0, Math.min(r, w / 2, h / 2));
+function roundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
-  ctx.moveTo(x + rad, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rad);
-  ctx.arcTo(x + w, y + h, x, y + h, rad);
-  ctx.arcTo(x, y + h, x, y, rad);
-  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
 
-/** Centered label; save/restore keeps letterSpacing from leaking into the title. */
-function label(ctx, text, x, y, size, color, spacing) {
+function ribbonPath(ctx, width, height) {
+  const skew = SHEAR * height;
+  ctx.beginPath();
+  ctx.moveTo(-width / 2 + skew / 2, -height / 2);
+  ctx.lineTo(width / 2 + skew / 2, -height / 2);
+  ctx.lineTo(width / 2 - skew / 2, height / 2);
+  ctx.lineTo(-width / 2 - skew / 2, height / 2);
+  ctx.closePath();
+}
+
+// Badge height is about 5% of the cover's short side, tucked just above the band.
+function placement(w, h, band) {
+  const short = Math.min(w, h);
+  const size = Math.max(18, Math.round(short * 0.05));
+  const pad = Math.max(4, Math.round(short * 0.018));
+  const gap = Math.max(2, Math.round(short * 0.012));
+  const bottom = Math.max(size + pad, band > 0 ? h - band - gap : h - pad);
+  return { size, pad, bottom };
+}
+
+function drawClassic(ctx, w, h, band, color) {
+  const { size, pad, bottom } = placement(w, h, band);
+  const title = 'ORIGINAL';
+  const detail = 'YOUR PHOTO, YOUR WORDS';
+  const titlePx = Math.max(10, Math.round(size * 0.52));
+  const detailPx = Math.max(6, Math.round(size * 0.2));
+  const inset = Math.max(5, Math.round(size * 0.24));
+
+  ctx.font = `700 ${titlePx}px ${FONT}`;
+  const titleWidth = ctx.measureText(title).width;
+  ctx.font = `600 ${detailPx}px ${FONT}`;
+  const detailWidth = ctx.measureText(detail).width;
+
+  const plateW = Math.max(24, Math.min(w - pad * 2, Math.max(titleWidth, detailWidth) + inset * 2));
+  const plateH = size;
+  const x = w - pad - plateW;
+  const y = bottom - plateH;
+
+  ctx.fillStyle = color.dark;
+  roundedRect(ctx, x, y, plateW, plateH, Math.max(3, Math.round(plateH * 0.18)));
+  ctx.fill();
+
   ctx.save();
-  ctx.font = `${Math.max(8, Math.round(size))}px "Bebas Neue", "Arial Narrow", sans-serif`;
+  ctx.globalAlpha = 0.75;
+  ctx.strokeStyle = color.accent;
+  ctx.lineWidth = Math.max(1, size * 0.03);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = color.accent;
+  ctx.font = `700 ${titlePx}px ${FONT}`;
+  ctx.fillText(title, x + plateW / 2, y + plateH * 0.6);
+  ctx.fillStyle = color.ink;
+  ctx.font = `600 ${detailPx}px ${FONT}`;
+  ctx.fillText(detail, x + plateW / 2, y + plateH * 0.86);
+}
+
+function drawRibbon(ctx, w, h, band, color) {
+  const { size, pad, bottom } = placement(w, h, band);
+  const ribbonH = Math.max(12, Math.round(size * 0.64));
+  const textPx = Math.max(10, Math.round(ribbonH * 0.82));
+  const over = Math.max(2, Math.round(ribbonH * 0.12));
+
+  ctx.font = `700 ${textPx}px ${FONT}`;
+  const textWidth = ctx.measureText('ORIGINAL').width;
+  const ribbonW = Math.max(24, Math.min(w - pad * 2 - over * 2, Math.max(textWidth + ribbonH, ribbonH * 2.6)));
+
+  const cos = Math.abs(Math.cos(TILT));
+  const sin = Math.abs(Math.sin(TILT));
+  const outerW = ribbonW + SHEAR * ribbonH + over * 2;
+  const outerH = ribbonH + over * 2;
+  const boundW = outerW * cos + outerH * sin;
+  const boundH = outerW * sin + outerH * cos;
+  const cx = w - pad - boundW / 2;
+  const cy = Math.max(pad + boundH / 2, bottom - boundH / 2);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(TILT);
+
+  ctx.fillStyle = color.dark;
+  ribbonPath(ctx, ribbonW + over * 2, ribbonH + over * 2);
+  ctx.fill();
+
+  ctx.fillStyle = color.accent;
+  ribbonPath(ctx, ribbonW, ribbonH);
+  ctx.fill();
+
+  ctx.fillStyle = color.dark;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.letterSpacing = `${spacing}px`;
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, y);
+  ctx.font = `700 ${textPx}px ${FONT}`;
+  ctx.fillText('ORIGINAL', 0, 0);
   ctx.restore();
 }
 
 export function drawBadge(ctx, w, h, band, grade, styleId) {
-  if (!ctx || !w || !h || !grade || !styleId) return;
-  if (styleId === 'none' || !BADGES[styleId]) return;
-  const s = Math.min(w, h);
-  const bh = Math.max(22, s * 0.052);
-  const bw = styleId === 'classic' ? s * 0.19 : styleId === 'ribbon' ? s * 0.25 : bh;
-  const cx = w - Math.max(14, s * 0.042) - bw / 2;
-  const bottom = h - band - s * 0.026;
-  const cy = clamp(bottom - bh / 2, s * 0.09, h - s * 0.02 - bh / 2);
+  if (!ctx || !(w > 0) || !(h > 0)) return;
+  if (!Object.prototype.hasOwnProperty.call(BADGES, styleId)) return;
+
+  const color = {
+    accent: (grade && grade.accent) || '#ff2e88',
+    ink: (grade && grade.ink) || '#fff4e8',
+    dark: (grade && grade.dark) || '#080318'
+  };
+  const bandH = Math.max(0, Number(band) || 0);
+
   ctx.save();
-  if (styleId === 'classic') drawPlate(ctx, cx, cy, bw, bh, grade);
-  else if (styleId === 'ribbon') drawRibbon(ctx, cx, cy, bw, bh, grade);
-  else if (styleId === 'stamp') drawSeal(ctx, cx, cy, bh, grade);
+  if (styleId === 'classic') drawClassic(ctx, w, h, bandH, color);
+  else if (styleId === 'ribbon') drawRibbon(ctx, w, h, bandH, color);
   ctx.restore();
-}
-
-/** Two stacked words on a dark rounded card with a hairline inner border. */
-function drawPlate(ctx, cx, cy, w, h, grade) {
-  const x = cx - w / 2;
-  const y = cy - h / 2;
-  rounded(ctx, x, y, w, h, h * 0.16);
-  ctx.fillStyle = 'rgba(10, 4, 20, 0.88)';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1, h * 0.035);
-  ctx.strokeStyle = accentA(grade.accent, 0.94);
-  ctx.stroke();
-  const inset = h * 0.13;
-  rounded(ctx, x + inset, y + inset, w - inset * 2, h - inset * 2, h * 0.08);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(255, 244, 234, 0.4)';
-  ctx.stroke();
-  ctx.fillStyle = accentA(grade.accent, 0.65);
-  ctx.fillRect(cx - w * 0.24, cy + h * 0.06, w * 0.48, Math.max(1, h * 0.03));
-  label(ctx, 'SUNSET', cx, y + h * 0.36, h * 0.32, '#fff6e9', h * 0.06);
-  label(ctx, 'EDITION', cx, y + h * 0.73, h * 0.24, grade.accent, h * 0.05);
-}
-
-/** A tilted banner with a notched tail and folded ends, like a screen-printed ribbon. */
-function drawRibbon(ctx, cx, cy, w, h, grade) {
-  const notch = h * 0.42;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-0.09);
-  ctx.beginPath();
-  ctx.moveTo(-w / 2, -h / 2);
-  ctx.lineTo(w / 2 - notch, -h / 2);
-  ctx.lineTo(w / 2, 0);
-  ctx.lineTo(w / 2 - notch, h / 2);
-  ctx.lineTo(-w / 2, h / 2);
-  ctx.lineTo(-w / 2 + notch * 0.55, 0);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(12, 5, 24, 0.9)';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1, h * 0.03);
-  ctx.strokeStyle = accentA(grade.accent, 0.95);
-  ctx.stroke();
-  ctx.fillStyle = accentA(grade.accent, 0.55);
-  ctx.beginPath();
-  ctx.moveTo(-w / 2, h / 2);
-  ctx.lineTo(-w / 2 + notch * 0.55, 0);
-  ctx.lineTo(-w / 2 + notch * 0.55, h / 2);
-  ctx.closePath();
-  ctx.fill();
-  label(ctx, 'NIGHT SHIFT', -notch * 0.35 - w * 0.02, -h * 0.13, h * 0.3, '#fff4e8', h * 0.045);
-  label(ctx, 'VOL. 01', -notch * 0.35 + w * 0.03, h * 0.24, h * 0.21, grade.accent, h * 0.05);
-  ctx.restore();
-}
-
-/** A compact round seal with a double ring and a number in the middle. */
-function drawSeal(ctx, cx, cy, d, grade) {
-  const r = d / 2;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(10, 4, 20, 0.88)';
-  ctx.fill();
-  ctx.lineWidth = Math.max(1, d * 0.045);
-  ctx.strokeStyle = accentA(grade.accent, 0.92);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.79, 0, Math.PI * 2);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(255, 244, 234, 0.5)';
-  ctx.stroke();
-  ctx.fillStyle = accentA(grade.accent, 0.8);
-  for (let i = 0; i < 4; i++) {
-    const a = (i * Math.PI) / 2;
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(a) * r * 0.89, cy + Math.sin(a) * r * 0.89, Math.max(1, d * 0.025), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  label(ctx, '01', cx, cy - d * 0.09, d * 0.38, '#fff6e9', 0);
-  label(ctx, 'VOL', cx, cy + d * 0.26, d * 0.19, grade.accent, d * 0.03);
 }

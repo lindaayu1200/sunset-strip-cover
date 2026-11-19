@@ -1,64 +1,70 @@
-// Panel layouts for the cover. Every rect is normalized (0..1 of the cover box) with a
-// small gutter kept between panels; `band` says where the lettering sits.
+// Panel geometry for the cover layouts.
+// All rectangles are expressed in canvas pixels and stay inside [0, w] x [0, h].
 
 export const LAYOUTS = {
-  grid4: {
-    id: 'grid4',
-    name: 'Four panels',
-    band: 'bottom',
-    panels: [
-      { x: 0.0, y: 0.0, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0.0, w: 0.5, h: 0.5 },
-      { x: 0.0, y: 0.5, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
-    ],
-  },
-  spotlight: {
-    id: 'spotlight',
-    name: 'Spotlight',
-    band: 'bottom',
-    panels: [
-      { x: 0.0, y: 0.0, w: 0.62, h: 0.72 },
-      { x: 0.62, y: 0.0, w: 0.38, h: 0.36 },
-      { x: 0.62, y: 0.36, w: 0.38, h: 0.36 },
-      { x: 0.0, y: 0.72, w: 0.62, h: 0.28 },
-    ],
-  },
-  strip3: {
-    id: 'strip3',
-    name: 'Strip of three',
-    band: 'bottom',
-    panels: [
-      { x: 0.0, y: 0.0, w: 1.0, h: 0.3 },
-      { x: 0.0, y: 0.3, w: 1.0, h: 0.3 },
-      { x: 0.0, y: 0.6, w: 1.0, h: 0.3 },
-    ],
-  },
-  cinema: {
-    id: 'cinema',
-    name: 'Full bleed',
-    band: 'bottom',
-    panels: [{ x: 0.0, y: 0.0, w: 1.0, h: 0.82 }],
-  },
-  duo: {
-    id: 'duo',
-    name: 'Duo split',
-    band: 'bottom',
-    panels: [
-      { x: 0.0, y: 0.0, w: 0.5, h: 0.82 },
-      { x: 0.5, y: 0.0, w: 0.5, h: 0.82 },
-    ],
-  },
+  grid4: { id: 'grid4', name: 'Four panels', letteringBand: 0.26 },
+  spotlight: { id: 'spotlight', name: 'Spotlight' },
+  strip3: { id: 'strip3', name: 'Three strip', letteringBand: 0.24 },
+  cinema: { id: 'cinema', name: 'Cinema' },
+  duo: { id: 'duo', name: 'Duo', letteringBand: 0.28 },
+  none: { id: 'none', name: 'None' }
 };
 
-/** Panels of `layout` at cover size [w, h]: gutter insets between panels, lettering band at the foot. */
-export function panelRects(layout, w, h, gutter, bandH) {
-  const usable = layout.band === 'none' ? 1 : 1 - bandH / h;
-  return layout.panels.map((p) => {
-    const x = p.x * w + (p.x > 0 ? gutter / 2 : 0);
-    const y = p.y * usable * h + (p.y > 0 ? gutter / 2 : 0);
-    const right = (p.x + p.w) * w - (p.x + p.w < 1 ? gutter / 2 : 0);
-    const bottom = (p.y + p.h) * usable * h - (p.y + p.h < 1 ? gutter / 2 : 0);
-    return { x: Math.round(x), y: Math.round(y), w: Math.max(1, Math.round(right - x)), h: Math.max(1, Math.round(bottom - y)) };
-  });
+export function layoutPanels(id, w, h) {
+  const layout = LAYOUTS[id];
+  if (!layout || id === 'none' || !(w > 0) || !(h > 0)) return [];
+
+  // The lettering band is measured as a fraction of the whole cover height.
+  const band = typeof layout.letteringBand === 'number' ? layout.letteringBand : 0;
+  const areaH = h * (1 - band);
+
+  // Gaps are tied to the short side so they read consistently at any size.
+  // The clamps keep every rectangle positive even for extreme aspect ratios.
+  const gap = Math.min(0.012 * Math.min(w, h), w / 10, areaH / 10);
+
+  if (id === 'cinema') {
+    return [{ x: 0, y: 0, w: w, h: areaH }];
+  }
+
+  if (id === 'grid4') {
+    const colW = (w - gap) / 2;
+    const rowH = (areaH - gap) / 2;
+    return [
+      { x: 0, y: 0, w: colW, h: rowH },
+      { x: colW + gap, y: 0, w: colW, h: rowH },
+      { x: 0, y: rowH + gap, w: colW, h: rowH },
+      { x: colW + gap, y: rowH + gap, w: colW, h: rowH }
+    ];
+  }
+
+  if (id === 'spotlight') {
+    const leftW = w * 0.62 - gap / 2;
+    const rightX = leftW + gap;
+    const rightW = w - rightX;
+    const topH = (areaH - gap) / 2;
+    const bottomY = topH + gap;
+    return [
+      { x: 0, y: 0, w: leftW, h: areaH },
+      { x: rightX, y: 0, w: rightW, h: topH },
+      { x: rightX, y: bottomY, w: rightW, h: areaH - bottomY }
+    ];
+  }
+
+  if (id === 'strip3') {
+    const stripW = (w - 2 * gap) / 3;
+    return [0, 1, 2].map(function (i) {
+      return { x: i * (stripW + gap), y: 0, w: stripW, h: areaH };
+    });
+  }
+
+  if (id === 'duo') {
+    const bandH = (areaH - gap) / 2;
+    const bottomY = bandH + gap;
+    return [
+      { x: 0, y: 0, w: w, h: bandH },
+      { x: 0, y: bottomY, w: w, h: areaH - bottomY }
+    ];
+  }
+
+  return [];
 }

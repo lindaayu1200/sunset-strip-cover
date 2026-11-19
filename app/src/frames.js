@@ -1,160 +1,186 @@
-// Decorative panel frames. CONTRACT (do not change signatures):
-//   FRAMES: object of style id -> { id, name }
-//   drawFrame(ctx, rect, styleId, grade): paints a decorative frame INSIDE rect (does not clip outside).
-// rect: {x, y, w, h}; grade has .accent. Draw nothing for unknown or 'none'.
+// Decorative frames painted strictly inside a supplied rectangle.
+// Self-contained: no imports, no network, no dependencies.
 
 export const FRAMES = {
   none: { id: 'none', name: 'None' },
-  neon: { id: 'neon', name: 'Neon edge' },
-  tape: { id: 'tape', name: 'Masking tape' },
-  double: { id: 'double', name: 'Double hairline' },
-  sticker: { id: 'sticker', name: 'Sticker plate' },
+  neon: { id: 'neon', name: 'Neon' },
+  tape: { id: 'tape', name: 'Tape' },
+  double: { id: 'double', name: 'Double' },
+  sticker: { id: 'sticker', name: 'Sticker' }
 };
 
-/** The panel palette starts with the grade accent, so a frame always suits the sunset. */
-function accentA(hex, alpha) {
-  const h = String(hex ?? '#ff2e88').replace('#', '');
-  const n = h.length === 6 ? parseInt(h, 16) : 0xff2e88;
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
-
-/** Every style draws inside a clipped copy of the panel, so no ink leaks into the gutter. */
-function clipPanel(ctx, r) {
+function roundRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
   ctx.beginPath();
-  ctx.rect(r.x, r.y, r.w, r.h);
-  ctx.clip();
-}
-
-const padding = (r) => Math.max(3, Math.min(r.w, r.h) * 0.018);
-
-/** A rounded path built from arcTo, for the plate sticker and its barcode label. */
-function rounded(ctx, x, y, w, h, radius) {
-  const rad = Math.max(0, Math.min(radius, w / 2, h / 2));
-  ctx.beginPath(); ctx.moveTo(x + rad, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rad);
-  ctx.arcTo(x + w, y + h, x, y + h, rad);
-  ctx.arcTo(x, y + h, x, y, rad);
-  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
 
-export function drawFrame(ctx, rect, styleId, grade) {
-  if (!ctx || !rect || rect.w <= 0 || rect.h <= 0 || !grade) return;
-  if (styleId === 'none' || !Object.prototype.hasOwnProperty.call(FRAMES, styleId)) return;
-  ctx.save();
-  clipPanel(ctx, rect);
-  if (styleId === 'neon') drawNeon(ctx, rect, grade);
-  else if (styleId === 'tape') drawTape(ctx, rect, grade);
-  else if (styleId === 'double') drawDouble(ctx, rect, grade);
-  else if (styleId === 'sticker') drawSticker(ctx, rect, grade);
-  ctx.restore();
-}
+function drawNeon(ctx, x, y, w, h, accent) {
+  const inset = Math.max(4, Math.min(10, Math.min(w, h) * 0.04));
+  const bx = x + inset;
+  const by = y + inset;
+  const bw = w - inset * 2;
+  const bh = h - inset * 2;
+  if (bw <= 0 || bh <= 0) return;
 
-/** A glowing inset hairline with four bright L-shaped corner ticks. */
-function drawNeon(ctx, r, grade) {
-  const s = Math.min(r.w, r.h);
-  const p = padding(r);
-  const x = r.x + p, y = r.y + p, w = r.w - p * 2, h = r.h - p * 2;
   ctx.save();
-  ctx.lineWidth = Math.max(1, s * 0.0028);
-  ctx.strokeStyle = accentA(grade.accent, 0.92);
-  ctx.shadowColor = grade.accent;
-  ctx.shadowBlur = s * 0.024;
-  ctx.strokeRect(x, y, w, h);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.004);
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 14;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.shadowBlur = 6;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
-  ctx.lineWidth = Math.max(1, s * 0.0011);
-  ctx.strokeStyle = 'rgba(255, 246, 238, 0.6)';
-  const inner = s * 0.005;
-  ctx.strokeRect(x + inner, y + inner, w - inner * 2, h - inner * 2);
-  const tick = Math.max(10, s * 0.04);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
-  ctx.lineWidth = Math.max(1, s * 0.0034);
-  const corners = [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]];
-  for (const [cx, cy, dx, dy] of corners) {
-    ctx.beginPath(); ctx.moveTo(cx + dx * tick, cy);
-    ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * tick);
-    ctx.stroke();
+  ctx.globalAlpha = 0.9;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  const tick = Math.min(28, Math.min(w, h) * 0.12);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bx, by + tick);
+  ctx.lineTo(bx, by);
+  ctx.lineTo(bx + tick, by);
+  ctx.moveTo(bx + bw - tick, by + bh);
+  ctx.lineTo(bx + bw, by + bh);
+  ctx.lineTo(bx + bw, by + bh - tick);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTape(ctx, x, y, w, h) {
+  const tapeWidth = Math.min(w * 0.34, 180);
+  const tapeHeight = Math.max(10, Math.min(h * 0.09, 30));
+  if (tapeWidth <= 0 || tapeHeight <= 0) return;
+  const inset = Math.min(w * 0.16, tapeWidth * 0.6);
+
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#ffffff';
+
+  ctx.save();
+  ctx.translate(x + inset, y + tapeHeight * 0.55);
+  ctx.rotate(-Math.PI / 6);
+  ctx.fillRect(-tapeWidth / 2, -tapeHeight / 2, tapeWidth, tapeHeight);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(x + w - inset, y + h - tapeHeight * 0.55);
+  ctx.rotate(Math.PI / 6);
+  ctx.fillRect(-tapeWidth / 2, -tapeHeight / 2, tapeWidth, tapeHeight);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawDouble(ctx, x, y, w, h, ink) {
+  const firstInset = 8;
+  const gap = 6;
+  if (w <= 2 * (firstInset + gap) + 4 || h <= 2 * (firstInset + gap) + 4) return;
+  ctx.save();
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.38;
+  ctx.strokeRect(x + firstInset + 0.5, y + firstInset + 0.5,
+    w - 2 * firstInset - 1, h - 2 * firstInset - 1);
+  ctx.globalAlpha = 0.26;
+  ctx.strokeRect(x + firstInset + gap + 0.5, y + firstInset + gap + 0.5,
+    w - 2 * (firstInset + gap) - 1, h - 2 * (firstInset + gap) - 1);
+  ctx.restore();
+}
+
+function drawSticker(ctx, x, y, w, h, accent, ink) {
+  const pad = Math.max(6, Math.min(14, Math.min(w, h) * 0.03));
+  const plateWidth = Math.min(w * 0.3, 160);
+  const plateHeight = Math.max(20, Math.min(h * 0.14, 44));
+  if (plateWidth <= 10 || plateHeight <= 10) return;
+  const plateX = x + pad;
+  const plateY = y + pad;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  roundRectPath(ctx, plateX, plateY, plateWidth, plateHeight, Math.min(8, plateHeight / 3));
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = accent;
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = accent;
+  roundRectPath(ctx, plateX + 5, plateY + 5,
+    Math.max(8, plateWidth * 0.2), plateHeight - 10, 3);
+  ctx.fill();
+
+  let barcodeX = plateX + plateWidth + Math.max(6, pad);
+  let barcodeY = plateY + plateHeight * 0.18;
+  if (x + w - barcodeX - pad < 24) {
+    barcodeX = plateX;
+    barcodeY = plateY + plateHeight + Math.max(4, pad * 0.5);
+  }
+  const barcodeHeight = plateHeight * 0.64;
+  const bars = [2, 1, 3, 1, 2, 4, 1, 2, 1, 3, 2, 1, 4, 2, 1, 3];
+  const gap = 2;
+  const total = bars.reduce((sum, bar) => sum + bar, 0) + gap * (bars.length - 1);
+  const available = Math.max(1, x + w - barcodeX - pad);
+  const factor = total > available ? available / total : 1;
+
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = ink;
+  let cursor = barcodeX;
+  for (let i = 0; i < bars.length; i += 1) {
+    const barWidth = Math.max(1, bars[i] * factor);
+    ctx.fillRect(cursor, barcodeY, barWidth, barcodeHeight);
+    cursor += barWidth + Math.max(1, gap * factor);
   }
   ctx.restore();
 }
 
-/** Two torn strips of translucent masking tape crossing opposite corners. */
-function drawTape(ctx, r, grade) {
-  const s = Math.min(r.w, r.h);
-  const len = s * 0.5;
-  const thick = Math.max(7, s * 0.062);
-  const strips = [
-    { x: r.x + len * 0.17, y: r.y + len * 0.17 },
-    { x: r.x + r.w - len * 0.17, y: r.y + r.h - len * 0.17 },
-  ];
-  for (const spot of strips) {
-    ctx.save();
-    ctx.translate(spot.x, spot.y);
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillStyle = 'rgba(248, 226, 194, 0.68)';
-    ctx.fillRect(-len / 2, -thick / 2, len, thick);
-    ctx.fillStyle = accentA(grade.accent, 0.18);
-    ctx.fillRect(-len / 2, -thick / 2, len, thick * 0.14);
-    ctx.fillRect(-len / 2, thick * 0.36, len, thick * 0.14);
-    ctx.fillStyle = 'rgba(96, 52, 36, 0.22)';
-    for (let i = -len / 2 + thick * 0.5; i < len / 2; i += thick * 1.1) {
-      ctx.fillRect(i, -thick / 2, Math.max(1, thick * 0.04), thick);
-    }
-    ctx.strokeStyle = 'rgba(108, 62, 42, 0.3)'; ctx.lineWidth = 1;
-    ctx.strokeRect(-len / 2 + 0.5, -thick / 2 + 0.5, len - 1, thick - 1);
-    ctx.restore();
-  }
-}
+export function drawFrame(ctx, rect, styleId, grade) {
+  if (!ctx || !rect) return;
+  const x = Number(rect.x) || 0;
+  const y = Number(rect.y) || 0;
+  const w = Number(rect.w) || 0;
+  const h = Number(rect.h) || 0;
+  if (!(w > 0) || !(h > 0)) return;
 
-/** Two fine borders, offset diagonally, with registration marks bridging the gap. */
-function drawDouble(ctx, r, grade) {
-  const s = Math.min(r.w, r.h);
-  const p = padding(r) * 0.7, off = Math.max(3, s * 0.012), t = Math.max(1, s * 0.002);
-  const x = r.x + p, y = r.y + p, w = r.w - p * 2, h = r.h - p * 2;
-  ctx.save();
-  ctx.lineWidth = Math.max(1, s * 0.0013);
-  ctx.strokeStyle = 'rgba(255, 242, 228, 0.6)';
-  ctx.strokeRect(x, y, w, h);
-  ctx.strokeStyle = accentA(grade.accent, 0.82);
-  ctx.strokeRect(x + off, y + off, w - off * 2, h - off * 2);
-  ctx.fillStyle = accentA(grade.accent, 0.9);
-  const marks = [
-    [x + off / 2, y, off, t], [x + off / 2, y + h, off, t],
-    [x, y + off / 2, t, off], [x + w, y + off / 2, t, off],
-  ];
-  for (const [mx, my, mw, mh] of marks) ctx.fillRect(mx - mw / 2, my - mh / 2, mw, mh);
-  ctx.restore();
-}
+  const id = styleId && FRAMES[styleId] ? styleId : 'none';
+  if (id === 'none') return;
 
-/** A pale rounded sticker in one corner: a barcode and a short accent label. */
-function drawSticker(ctx, r, grade) {
-  const s = Math.min(r.w, r.h);
-  const p = padding(r);
+  const palette = grade || {};
+  const accent = palette.accent || '#5ce1ff';
+  const ink = palette.ink || 'rgba(12, 14, 26, 0.85)';
+
   ctx.save();
-  ctx.lineWidth = Math.max(1, s * 0.0016);
-  ctx.strokeStyle = accentA(grade.accent, 0.44);
-  rounded(ctx, r.x + p, r.y + p, r.w - p * 2, r.h - p * 2, s * 0.018);
-  ctx.stroke();
-  const pw = Math.min(r.w * 0.34, s * 0.44), ph = pw * 0.42;
-  const px = r.x + p + s * 0.018, py = r.y + p + s * 0.018;
-  rounded(ctx, px, py, pw, ph, ph * 0.14);
-  ctx.fillStyle = 'rgba(252, 244, 234, 0.9)'; ctx.fill();
-  ctx.lineWidth = Math.max(1, s * 0.002);
-  ctx.strokeStyle = accentA(grade.accent, 0.9);
-  ctx.stroke();
-  // Seed the barcode from the panel's position so repeated stickers read as separate prints
-  // instead of a copy-pasted stamp; the same panel still renders identically every time.
-  const seed = Math.round(r.x * 0.013 + r.y * 0.021);
-  const bx = px + pw * 0.08, bw = pw * 0.84;
-  const by = py + ph * 0.32, bh = ph * 0.5;
-  const bars = 11 + (Math.abs(seed) % 4);
-  for (let i = 0; i < bars; i++) {
-    const wide = (i * 7 + 3 + seed) % 5 === 0;
-    const barW = (bw / (bars * 1.9)) * (wide ? 1.55 : 0.78);
-    ctx.fillStyle = (i + seed) % 3 === 0 ? accentA(grade.accent, 0.95) : 'rgba(38, 18, 34, 0.88)';
-    ctx.fillRect(bx + (i / bars) * bw, by, Math.max(1, barW), bh);
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  if (id === 'neon') {
+    drawNeon(ctx, x, y, w, h, accent);
+  } else if (id === 'tape') {
+    drawTape(ctx, x, y, w, h);
+  } else if (id === 'double') {
+    drawDouble(ctx, x, y, w, h, ink);
+  } else if (id === 'sticker') {
+    drawSticker(ctx, x, y, w, h, accent, ink);
   }
-  ctx.fillStyle = accentA(grade.accent, 0.85);
-  ctx.fillRect(px + pw * 0.08, py + ph * 0.14, pw * (0.36 + 0.1 * (Math.abs(seed) % 3)), ph * 0.07);
+
   ctx.restore();
 }

@@ -1,165 +1,285 @@
-// The lettering: a big stacked title in Anton, a subtitle strip and a kicker, drawn into the
-// band at the foot of the cover. Four styles, four ink colors.
-const INKS = {
-  white: { fill: ['#ffffff', '#f2e2ea'], stroke: '#16040f', glow: 'rgba(255,255,255,0.0)' },
-  gold: { fill: ['#ffe9a8', '#ffb057'], stroke: '#3a1404', glow: 'rgba(255,176,87,0.55)' },
-  pink: { fill: ['#ffd1ec', '#ff2e88'], stroke: '#2a0418', glow: 'rgba(255,46,136,0.6)' },
-  mint: { fill: ['#d9fff2', '#2de2c5'], stroke: '#04231c', glow: 'rgba(45,226,197,0.5)' },
+// Lettering primitives for the bottom caption band.
+// Self-contained: no imports, no network, no dependencies.
+
+export const INKS = {
+  white: { id: 'white', name: 'White', color: '#ffffff' },
+  gold: { id: 'gold', name: 'Gold', color: '#f6c453' },
+  pink: { id: 'pink', name: 'Pink', color: '#ff77b0' },
+  mint: { id: 'mint', name: 'Mint', color: '#79f0c4' }
 };
 
-export function drawLettering(ctx, w, h, spec) {
-  const band = spec.band;
-  if (!band) return;
-  const title = String(spec.title ?? '').trim();
-  const subtitle = String(spec.subtitle ?? '').trim().toUpperCase();
-  const kicker = String(spec.kicker ?? '').trim().toUpperCase();
-  const ink = INKS[spec.ink] ?? INKS.white;
-  const base = band * 0.34 * (spec.scale ?? 1);
+const STYLES = new Set(['slab', 'chrome', 'neon', 'stencil']);
 
-  // Scrim: a dark gradient so the letters always read.
-  const scrim = ctx.createLinearGradient(0, h - band, 0, h);
-  scrim.addColorStop(0, 'rgba(10, 3, 20, 0)');
-  scrim.addColorStop(0.42, 'rgba(10, 3, 20, 0.55)');
-  scrim.addColorStop(1, 'rgba(10, 3, 20, 0.9)');
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function parseColor(value) {
+  const str = String(value == null ? '' : value).trim();
+  let match = /^#([0-9a-f]{3})$/i.exec(str);
+  if (match) {
+    const hex = match[1];
+    return [
+      parseInt(hex[0] + hex[0], 16),
+      parseInt(hex[1] + hex[1], 16),
+      parseInt(hex[2] + hex[2], 16)
+    ];
+  }
+  match = /^#([0-9a-f]{6})$/i.exec(str);
+  if (match) {
+    return [
+      parseInt(match[1].slice(0, 2), 16),
+      parseInt(match[1].slice(2, 4), 16),
+      parseInt(match[1].slice(4, 6), 16)
+    ];
+  }
+  match = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(str);
+  if (match) {
+    return [Number(match[1]), Number(match[2]), Number(match[3])];
+  }
+  return null;
+}
+
+function shade(value, amount) {
+  const rgb = parseColor(value);
+  if (!rgb) return amount >= 0 ? '#ffffff' : '#000000';
+  const target = amount >= 0 ? 255 : 0;
+  const t = clamp(Math.abs(amount), 0, 1);
+  const mix = (channel) => Math.round(channel + (target - channel) * t);
+  return `rgb(${mix(rgb[0])}, ${mix(rgb[1])}, ${mix(rgb[2])})`;
+}
+
+function makeScratch(width, height) {
+  const cw = Math.max(1, Math.ceil(width));
+  const ch = Math.max(1, Math.ceil(height));
+  if (typeof document !== 'undefined' && document.createElement) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      return canvas;
+    } catch (err) {
+      // fall through to OffscreenCanvas
+    }
+  }
+  if (typeof OffscreenCanvas !== 'undefined') {
+    try {
+      return new OffscreenCanvas(cw, ch);
+    } catch (err) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function drawSpacedText(ctx, text, centerX, y, spacing) {
+  const chars = Array.from(text);
+  if (!chars.length) return 0;
+  const previousAlign = ctx.textAlign;
+  const widths = chars.map((char) => ctx.measureText(char).width);
+  const total = widths.reduce((sum, width) => sum + width, 0) + spacing * (chars.length - 1);
+  let x = centerX - total / 2;
+  ctx.textAlign = 'left';
+  for (let i = 0; i < chars.length; i += 1) {
+    ctx.fillText(chars[i], x, y);
+    x += widths[i] + spacing;
+  }
+  ctx.textAlign = previousAlign;
+  return total;
+}
+
+function punchStencilGaps(target, centerY, size, width, height, topLimit) {
+  const gapHeight = Math.max(1.5, size * 0.022);
+  const stepY = Math.max(6, size * 0.13);
+  const top = centerY - size * 0.82;
+  const bottom = centerY + size * 0.06;
+  target.save();
+  target.globalCompositeOperation = 'destination-out';
+  target.fillStyle = '#000000';
+  for (let gy = top; gy < bottom; gy += stepY) {
+    const clippedY = Math.max(topLimit, gy);
+    if (clippedY < height) {
+      target.fillRect(0, clippedY, width, gapHeight);
+    }
+  }
+  target.restore();
+}
+
+export function drawLettering(ctx, w, h, band, grade, opts) {
+  if (!ctx || !(w > 0) || !(h > 0) || !(band > 0)) return;
+
+  const options = opts || {};
+  const palette = grade || {};
+  const bandTop = h - band;
+  const centerX = w / 2;
+  const scale = clamp(Number(options.sizeScale) || 1, 0.5, 1.5);
+  const ink = (INKS[options.ink] || INKS.white).color;
+  const accent = palette.accent || '#ff8a4c';
+  const outline = palette.ink || 'rgba(0, 0, 0, 0.72)';
+  const style = STYLES.has(options.style) ? options.style : 'slab';
+
+  const title = String(options.title == null ? '' : options.title).toUpperCase();
+  const kicker = String(options.kicker == null ? '' : options.kicker).toUpperCase();
+  const subtitle = String(options.subtitle == null ? '' : options.subtitle);
+
+  const kickerSize = clamp(band * 0.12, 9, 20);
+  const subSize = clamp(band * 0.1, 8, 16);
+  const maxTitleWidth = Math.max(1, w - 2 * (w * 0.06));
+  const titleFont = (size) => `700 ${size}px Anton, sans-serif`;
+
+  let titleSize = Math.min(96 * scale, band * 0.54);
+  ctx.font = titleFont(titleSize);
+  let measured = ctx.measureText(title).width;
+  for (let pass = 0; pass < 12 && measured > maxTitleWidth && titleSize > 8; pass += 1) {
+    titleSize = Math.max(8, titleSize * (maxTitleWidth / measured) * 0.99);
+    ctx.font = titleFont(titleSize);
+    measured = ctx.measureText(title).width;
+  }
+
+  const kickerY = bandTop + band * 0.17;
+  const titleY = bandTop + band * 0.64;
+  const subtitleY = bandTop + band * 0.88;
+
   ctx.save();
-  ctx.fillStyle = scrim;
-  ctx.fillRect(0, h - band, w, band);
-
-  const margin = w * 0.055;
-
-  // Stacked from the foot up: subtitle line, then the big title, then the kicker.
-  const subtitleY = h - band * 0.13;
-  const titleY = subtitleY - band * 0.16;
-  const kickerY = h - band + band * 0.16;
+  ctx.beginPath();
+  ctx.rect(0, bandTop, w, band);
+  ctx.clip();
 
   if (kicker) {
-    const ks = Math.max(10, band * 0.082);
-    ctx.font = `${Math.round(ks)}px "Bebas Neue", "Arial Narrow", sans-serif`;
-    ctx.textAlign = 'left';
+    ctx.save();
+    ctx.font = `700 ${kickerSize}px 'Bebas Neue', sans-serif`;
     ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = ink.glow === 'rgba(255,255,255,0.0)' ? '#ffcf9a' : ink.fill[1];
-    ctx.letterSpacing = `${ks * 0.42}px`;
-    ctx.fillText(kicker, margin, kickerY);
-    ctx.letterSpacing = '0px';
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.95;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 4;
+    drawSpacedText(ctx, kicker, centerX, kickerY, Math.max(2, kickerSize * 0.3));
+    ctx.restore();
   }
 
   if (title) {
-    const lines = wrapTitle(ctx, title.toUpperCase(), base, w - margin * 2, spec.style);
-    for (let i = 0; i < lines.length; i++) {
-      const ty = titleY - (lines.length - 1 - i) * base * 0.82;
-      drawTitleLine(ctx, lines[i], margin, ty, base, spec.style, ink, w);
+    ctx.save();
+    ctx.font = titleFont(titleSize);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    if (style === 'slab') {
+      ctx.save();
+      ctx.translate(centerX, 0);
+      ctx.transform(1, 0, -0.11, 1, 0, 0);
+      ctx.translate(-centerX, 0);
+      ctx.fillStyle = ink;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = Math.max(3, titleSize * 0.07);
+      ctx.shadowOffsetY = Math.max(1, titleSize * 0.035);
+      ctx.fillText(title, centerX, titleY);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.lineWidth = Math.max(1, titleSize * 0.022);
+      ctx.strokeStyle = outline;
+      ctx.strokeText(title, centerX, titleY);
+      ctx.restore();
+    } else if (style === 'chrome') {
+      const gradient = ctx.createLinearGradient(0, titleY - titleSize * 0.85, 0, titleY + titleSize * 0.08);
+      gradient.addColorStop(0, shade(ink, 0.72));
+      gradient.addColorStop(0.38, ink);
+      gradient.addColorStop(0.5, shade(ink, -0.32));
+      gradient.addColorStop(1, shade(ink, -0.72));
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = Math.max(4, titleSize * 0.09);
+      ctx.shadowOffsetY = 2;
+      ctx.fillText(title, centerX, titleY);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, titleY - titleSize * 0.88, w, titleSize * 0.45);
+      ctx.clip();
+      ctx.lineWidth = Math.max(1, titleSize * 0.018);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.strokeText(title, centerX, titleY - titleSize * 0.012);
+      ctx.restore();
+    } else if (style === 'neon') {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = accent;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = Math.max(8, titleSize * 0.42);
+      ctx.globalAlpha = 0.55;
+      ctx.fillText(title, centerX, titleY);
+      ctx.shadowBlur = Math.max(4, titleSize * 0.18);
+      ctx.globalAlpha = 0.85;
+      ctx.fillText(title, centerX, titleY);
+      ctx.restore();
+      ctx.save();
+      ctx.fillStyle = ink === accent ? accent : shade(accent, 0.45);
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = Math.max(2, titleSize * 0.05);
+      ctx.fillText(title, centerX, titleY);
+      ctx.restore();
+    } else {
+      const scratch = makeScratch(w, band);
+      const sctx = scratch && scratch.getContext ? scratch.getContext('2d') : null;
+      if (sctx) {
+        sctx.clearRect(0, 0, w, band);
+        sctx.font = titleFont(titleSize);
+        sctx.textAlign = 'center';
+        sctx.textBaseline = 'alphabetic';
+        sctx.fillStyle = ink;
+        sctx.fillText(title, centerX, titleY - bandTop);
+        punchStencilGaps(sctx, titleY - bandTop, titleSize, w, band, 0);
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = Math.max(3, titleSize * 0.06);
+        ctx.shadowOffsetY = 2;
+        ctx.drawImage(scratch, 0, bandTop);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = ink;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+        ctx.shadowBlur = Math.max(3, titleSize * 0.06);
+        ctx.fillText(title, centerX, titleY);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        punchStencilGaps(ctx, titleY, titleSize, w, h, bandTop);
+      }
     }
+    ctx.restore();
   }
 
   if (subtitle) {
-    const ss = Math.max(9, band * 0.072);
-    ctx.font = `${Math.round(ss)}px "Bebas Neue", "Arial Narrow", sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(247, 236, 240, 0.92)';
-    ctx.letterSpacing = `${ss * 0.34}px`;
-    ctx.fillText(subtitle, margin, subtitleY);
-    ctx.letterSpacing = '0px';
-    const tw = ctx.measureText(subtitle).width;
-    ctx.strokeStyle = 'rgba(255, 190, 120, 0.85)';
-    ctx.lineWidth = Math.max(1, ss * 0.09);
-    ctx.beginPath();
-    ctx.moveTo(margin, subtitleY + ss * 0.3);
-    ctx.lineTo(margin + Math.min(tw + ss * 1.4, w - margin * 2), subtitleY + ss * 0.3);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/** Fits a title to the band: split on the last space that fits, then shrink to fit one line. */
-function wrapTitle(ctx, text, size, maxW, style) {
-  ctx.letterSpacing = `${size * 0.02}px`;
-  let s = size;
-  ctx.font = titleFont(s);
-  while (ctx.measureText(text).width > maxW && s > size * 0.45) {
-    s *= 0.94;
-    ctx.font = titleFont(s);
-  }
-  if (ctx.measureText(text).width <= maxW) return [{ text, size: s }];
-  const words = text.split(' ');
-  let best = [text];
-  for (let i = 1; i < words.length; i++) {
-    const a = words.slice(0, i).join(' ');
-    const b = words.slice(i).join(' ');
-    ctx.font = titleFont(size);
-    if (ctx.measureText(a).width <= maxW && ctx.measureText(b).width <= maxW) best = [a, b];
-  }
-  let s2 = size;
-  ctx.font = titleFont(s2);
-  while (best.some((ln) => ctx.measureText(ln).width > maxW) && s2 > size * 0.4) {
-    s2 *= 0.92;
-    ctx.font = titleFont(s2);
-  }
-  return best.map((t) => ({ text: t, size: s2 }));
-}
-
-function titleFont(px) {
-  return `${Math.round(px)}px "Anton", "Arial Narrow", sans-serif`;
-}
-
-function drawTitleLine(ctx, line, x, y, size, style, ink, w) {
-  ctx.font = titleFont(line.size);
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.letterSpacing = `${line.size * 0.02}px`;
-  const skew = style === 'stencil' || style === 'chrome' ? 0 : -0.02;
-
-  ctx.save();
-  if (skew !== 0) {
-    ctx.translate(x + line.size * 0.02, y);
-    ctx.transform(1, 0, skew, 1, 0, 0);
-    ctx.translate(-x, -y);
-  }
-
-  if (style === 'chrome') {
-    const g = ctx.createLinearGradient(0, y - line.size, 0, y + line.size * 0.06);
-    g.addColorStop(0, '#fdfdff');
-    g.addColorStop(0.45, ink.fill[0]);
-    g.addColorStop(0.52, ink.fill[1]);
-    g.addColorStop(1, '#f7ecf2');
-    ctx.fillStyle = g;
-  } else if (style === 'neon') {
-    ctx.shadowColor = ink.glow;
-    ctx.shadowBlur = line.size * 0.28;
-    ctx.fillStyle = ink.fill[0];
-  } else {
-    ctx.fillStyle = ink.fill[0];
-  }
-
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(2, line.size * (style === 'stencil' ? 0.055 : 0.075));
-  ctx.strokeStyle = ink.stroke;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-  ctx.shadowBlur = line.size * 0.1;
-  ctx.shadowOffsetY = line.size * 0.03;
-  ctx.strokeText(line.text, x, y);
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-  if (style === 'neon') {
-    ctx.shadowColor = ink.glow;
-    ctx.shadowBlur = line.size * 0.24;
-  }
-  ctx.fillText(line.text, x, y);
-  if (style === 'chrome') {
-    ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = 'rgba(20, 4, 14, 0.65)';
-    ctx.lineWidth = Math.max(1, line.size * 0.016);
-    ctx.strokeText(line.text, x, y);
-  }
-  if (style === 'stencil') {
     ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0,0,0,0.85)';
-    ctx.fillRect(x, y - line.size * 0.16, w, line.size * 0.045);
-    ctx.fillRect(x, y - line.size * 0.02, w, line.size * 0.03);
+    ctx.font = `700 ${subSize}px 'Bebas Neue', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = shade(ink, 0.08);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(subtitle, centerX, subtitleY);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    const textWidth = ctx.measureText(subtitle).width;
+    const half = Math.min(w * 0.42, textWidth / 2 + subSize * 0.9);
+    const underlineY = Math.min(h - 2, subtitleY + subSize * 0.42);
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.75;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - half, underlineY);
+    ctx.lineTo(centerX + half, underlineY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(centerX - half, underlineY - 2);
+    ctx.lineTo(centerX - half, underlineY + 2);
+    ctx.moveTo(centerX + half, underlineY - 2);
+    ctx.lineTo(centerX + half, underlineY + 2);
+    ctx.stroke();
     ctx.restore();
-    ctx.fillStyle = ink.fill[0];
   }
+
   ctx.restore();
-  ctx.letterSpacing = '0px';
 }

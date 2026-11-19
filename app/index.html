@@ -1,125 +1,221 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sunset Strip — Vice cover art maker</title>
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="./style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Sunset Strip — Offline Cover Art Maker</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <span class="mark" aria-hidden="true"></span>
-    <div>
-      <h1>Sunset Strip</h1>
-      <p class="tag">Vice-style cover art from your own photos</p>
-    </div>
+  <div class="app-shell">
+
+    <header class="topbar">
+      <div class="brand">
+        <h1 class="brand-title">SUNSET STRIP</h1>
+        <p class="brand-subtitle">Neon-drenched cover art, made right here in your browser — no uploads, no network.</p>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="size-switch" role="group" aria-label="Export size">
+          <button type="button" class="btn btn-size is-active" data-size="square" data-width="1080" data-height="1080">
+            <span class="size-name">Square</span>
+            <span class="size-dims">1080&times;1080</span>
+          </button>
+          <button type="button" class="btn btn-size" data-size="poster" data-width="1080" data-height="1350">
+            <span class="size-name">Poster</span>
+            <span class="size-dims">1080&times;1350</span>
+          </button>
+          <button type="button" class="btn btn-size" data-size="wide" data-width="1920" data-height="1080">
+            <span class="size-name">Wide</span>
+            <span class="size-dims">1920&times;1080</span>
+          </button>
+        </div>
+
+        <button type="button" id="button-export" class="btn btn-export">EXPORT PNG</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+
+      <section class="stage-panel" aria-label="Cover art preview">
+        <div class="stage-head">
+          <span class="stage-label">LIVE PREVIEW</span>
+          <span class="stage-meta" id="stage-meta">1080 &times; 1080</span>
+        </div>
+
+        <div class="stage-canvas-wrap">
+          <canvas id="preview-canvas" width="1080" height="1080" aria-label="Cover art preview canvas"></canvas>
+        </div>
+
+        <p class="stage-foot">Drop one photo to repeat it across the whole design, or one image per panel.</p>
+      </section>
+
+      <aside class="sidebar" aria-label="Editor controls">
+
+        <section class="control-group">
+          <h2 class="group-title">PHOTOS</h2>
+
+          <label class="dropzone" for="input-photos" id="dropzone">
+            <input type="file" id="input-photos" class="sr-only" accept="image/*" multiple>
+            <span class="dropzone-icon" aria-hidden="true">+</span>
+            <span class="dropzone-title">Add photos</span>
+            <span class="dropzone-hint">1 photo fills every panel, or one per panel</span>
+          </label>
+
+          <div class="button-row">
+            <button type="button" id="button-shuffle" class="btn btn-soft">Shuffle panels</button>
+            <button type="button" id="button-recenter" class="btn btn-soft">Recenter all</button>
+          </div>
+
+          <div class="thumb-strip" id="thumb-strip" aria-label="Panel thumbnails">
+            <p class="thumb-empty">No photos yet — add some to start building panels.</p>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <h2 class="group-title">LETTERING</h2>
+
+          <div class="field">
+            <label class="field-label" for="input-title">Title</label>
+            <input type="text" id="input-title" class="text-input" value="MIDNIGHT DRIVE" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="input-subtitle">Subtitle</label>
+            <input type="text" id="input-subtitle" class="text-input" value="ONE LAST RIDE THROUGH THE CITY" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="input-kicker">Kicker</label>
+            <input type="text" id="input-kicker" class="text-input" value="SUNSET STRIP VOL. 01" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="field-field-pair">
+            <div class="field">
+              <label class="field-label" for="select-lettering">Style</label>
+              <select id="select-lettering" class="select-input">
+                <option value="anton">Anton — Tall Block</option>
+                <option value="bebas">Bebas Neue — Condensed</option>
+                <option value="russo">Russo One — Wide</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="select-ink">Color</label>
+              <select id="select-ink" class="select-input">
+                <option value="hot-pink">Hot Pink</option>
+                <option value="sunset-orange">Sunset Orange</option>
+                <option value="cream">Cream</option>
+                <option value="electric-blue">Electric Blue</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <h2 class="group-title">POSTER</h2>
+
+          <div class="field">
+            <label class="field-label" for="select-layout">Panel layout</label>
+            <select id="select-layout" class="select-input">
+              <option value="single">Full Bleed</option>
+              <option value="duo">Two Panels</option>
+              <option value="trio" selected>Three Panels</option>
+              <option value="grid">Quad Grid</option>
+              <option value="stripe">Wide Stripe</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="select-grade">Color grade</label>
+            <select id="select-grade" class="select-input">
+              <option value="neon">Neon Nights</option>
+              <option value="golden">Golden Hour</option>
+              <option value="vapor">Vaporwave</option>
+              <option value="noir">Midnight Noir</option>
+              <option value="none">Raw</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div class="range-head">
+              <label class="field-label" for="input-title-size">Title size</label>
+              <output class="range-value" id="title-size-value" for="input-title-size">96</output>
+            </div>
+            <input type="range" id="input-title-size" class="range-input" min="40" max="180" step="1" value="96">
+          </div>
+
+          <div class="check-row">
+            <label class="check-label" for="check-palms">
+              <input type="checkbox" id="check-palms" class="check-input" checked>
+              <span>Palms</span>
+            </label>
+            <label class="check-label" for="check-grain">
+              <input type="checkbox" id="check-grain" class="check-input" checked>
+              <span>Grain</span>
+            </label>
+            <label class="check-label" for="check-badge">
+              <input type="checkbox" id="check-badge" class="check-input" checked>
+              <span>Badge</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <h2 class="group-title">FINISHING TOUCHES</h2>
+
+          <div class="field">
+            <label class="field-label" for="select-frame">Frame</label>
+            <select id="select-frame" class="select-input">
+              <option value="none">none</option>
+              <option value="neon">neon</option>
+              <option value="tape">tape</option>
+              <option value="double">double</option>
+              <option value="sticker">sticker</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="select-pattern">Band texture</label>
+            <select id="select-pattern" class="select-input">
+              <option value="none">none</option>
+              <option value="rays">rays</option>
+              <option value="dots">dots</option>
+              <option value="grid">grid</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="select-badge">Badge</label>
+            <select id="select-badge" class="select-input">
+              <option value="classic">classic</option>
+              <option value="ribbon">ribbon</option>
+              <option value="none">none</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="select-idea">Caption idea</label>
+            <select id="select-idea" class="select-input">
+              <option value="">Pick a mood…</option>
+              <option value="neon-nights">Neon Nights</option>
+              <option value="after-hours">After Hours</option>
+              <option value="golden-hour">Golden Hour</option>
+              <option value="vice-city">Vice City</option>
+              <option value="poolside">Poolside</option>
+              <option value="midnight-drive">Midnight Drive</option>
+              <option value="last-call">Last Call</option>
+              <option value="sunset-boulevard">Sunset Boulevard</option>
+            </select>
+          </div>
+        </section>
+
+      </aside>
+    </main>
   </div>
-  <div class="sizes" role="group" aria-label="Export size">
-    <button type="button" class="size is-on" data-size="1080x1080">Square<small>1080 &times; 1080</small></button>
-    <button type="button" class="size" data-size="1080x1350">Poster<small>1080 &times; 1350</small></button>
-    <button type="button" class="size" data-size="1920x1080">Wide<small>1920 &times; 1080</small></button>
-    <button type="button" id="export" class="export">Export PNG</button>
-  </div>
-</header>
 
-<main class="studio">
-  <section class="stage" aria-label="Live preview">
-    <div class="frame">
-      <canvas id="cover" width="1080" height="1080" aria-label="Cover preview"></canvas>
-      <div class="hint" id="hint">Drop photos anywhere &middot; drag a panel to move it &middot; scroll to zoom</div>
-    </div>
-    <div class="deck" id="deck" aria-label="Panels"></div>
-  </section>
-
-  <aside class="panel" aria-label="Editor">
-    <div class="block">
-      <h2>Photos</h2>
-      <label class="drop" id="drop">
-        <input id="photo" type="file" accept="image/*" multiple hidden>
-        <strong>Add photos</strong>
-        <span>1 photo fills every panel, or one per panel</span>
-      </label>
-      <div class="row">
-        <button type="button" id="shuffle" class="ghost">Shuffle panels</button>
-        <button type="button" id="reset" class="ghost">Recenter all</button>
-      </div>
-    </div>
-
-    <div class="block">
-      <h2>Lettering</h2>
-      <label class="field">Title
-        <input id="title" type="text" maxlength="34" value="SUNSET STRIP">
-      </label>
-      <label class="field">Subtitle
-        <input id="subtitle" type="text" maxlength="48" value="VICE CITY STORIES &middot; VOL. 01">
-      </label>
-      <label class="field">Kicker
-        <input id="kicker" type="text" maxlength="26" value="THE COAST IS YOURS">
-      </label>
-      <div class="row">
-        <label class="field slim">Style
-          <select id="lettering">
-            <option value="slab">Slab outline</option>
-            <option value="chrome">Chrome</option>
-            <option value="neon">Neon tube</option>
-            <option value="stencil">Stencil</option>
-          </select>
-        </label>
-        <label class="field slim">Color
-          <select id="ink">
-            <option value="white">White</option>
-            <option value="gold">Mango gold</option>
-            <option value="pink">Hot pink</option>
-            <option value="mint">Mint</option>
-          </select>
-        </label>
-      </div>
-      <label class="field">Title size <input id="titlesize" type="range" min="70" max="130" value="100" step="1"></label>
-    </div>
-
-    <div class="block">
-      <h2>Poster</h2>
-      <label class="field slim">Panel layout
-        <select id="layout">
-          <option value="grid4">Four panels</option>
-          <option value="spotlight">Spotlight (1 big, 2 small)</option>
-          <option value="strip3">Strip of three</option>
-          <option value="cinema">Full bleed</option>
-          <option value="duo">Duo split</option>
-        </select>
-      </label>
-      <label class="field slim">Color grade
-        <select id="grade">
-          <option value="vice">Vice sunset</option>
-          <option value="neon">Neon midnight</option>
-          <option value="gold">Golden hour</option>
-          <option value="teal">Teal &amp; orange</option>
-          <option value="miami">Miami dusk</option>
-        </select>
-      </label>
-      <div class="row toggles">
-        <label class="check"><input id="palms" type="checkbox" checked> Palms</label>
-        <label class="check"><input id="grain" type="checkbox" checked> Grain</label>
-        <label class="check"><input id="badge" type="checkbox" checked> Badge</label>
-      </div>
-      <div class="row">
-        <label class="field slim">Panel frame
-          <select id="frame"><option value="none">None</option></select>
-        </label>
-        <label class="field slim">Band texture
-          <select id="pattern"><option value="none">Plain</option></select>
-        </label>
-      </div>
-      <div class="row ideas" id="ideas"></div>
-      <label class="field">Grain <input id="grainamt" type="range" min="0" max="100" value="42"></label>
-      <label class="field">Sun glow <input id="glow" type="range" min="0" max="100" value="55"></label>
-    </div>
-
-    <p class="status" id="status" role="status">Ready</p>
-  </aside>
-</main>
-<script type="module" src="./src/main.js"></script>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

@@ -1,182 +1,196 @@
-// Color grades: the Vice City look. Each grade paints an atmosphere over the composited
-// panels and tints each panel.
+// Color grades and self-contained canvas painting helpers.
+
 export const GRADES = {
   vice: {
     id: 'vice',
-    base: '#1c0b2e',
+    name: 'Vice',
+    sky: ['#1b0b3a', '#8e2a9e', '#ff6b4a'],
+    sun: '#ffd76a',
+    sea: '#2a0f4d',
+    land: '#120726',
     accent: '#ff2e88',
-    skyTop: 'rgba(64, 18, 96, 0.55)',
-    skyBottom: 'rgba(255, 84, 60, 0.5)',
-    washTop: 'rgba(255, 46, 136, 0.20)',
-    washBottom: 'rgba(28, 10, 70, 0.34)',
-    sunColor: '#ffb057',
-    horizon: 'rgba(255, 120, 90, 0.55)',
-    palmColor: 'rgba(20, 6, 30, 0.92)',
-    vignette: 0.5,
-    sat: 1.18,
-    contrast: 1.06,
-  },
-  neon: {
-    id: 'neon',
-    base: '#0a0f2e',
-    accent: '#00e5ff',
-    skyTop: 'rgba(8, 16, 60, 0.6)',
-    skyBottom: 'rgba(210, 40, 160, 0.4)',
-    washTop: 'rgba(0, 229, 255, 0.16)',
-    washBottom: 'rgba(40, 8, 90, 0.42)',
-    sunColor: '#ff54b0',
-    horizon: 'rgba(255, 84, 176, 0.42)',
-    palmColor: 'rgba(4, 8, 28, 0.94)',
-    vignette: 0.62,
-    sat: 1.22,
-    contrast: 1.1,
+    ink: '#fff4e8',
+    dark: '#080318'
   },
   gold: {
     id: 'gold',
-    base: '#2b1508',
-    accent: '#ffc043',
-    skyTop: 'rgba(120, 60, 10, 0.42)',
-    skyBottom: 'rgba(255, 176, 60, 0.5)',
-    washTop: 'rgba(255, 200, 90, 0.14)',
-    washBottom: 'rgba(70, 26, 6, 0.36)',
-    sunColor: '#ffe08a',
-    horizon: 'rgba(255, 190, 110, 0.5)',
-    palmColor: 'rgba(38, 16, 6, 0.9)',
-    vignette: 0.48,
-    sat: 1.12,
-    contrast: 1.04,
+    name: 'Gold',
+    sky: ['#2b1246', '#e2663f', '#ffc46b'],
+    sun: '#fff1a8',
+    sea: '#3a1a48',
+    land: '#1c0e2c',
+    accent: '#ff9f1c',
+    ink: '#fff8e7',
+    dark: '#0e0618'
   },
-  teal: {
-    id: 'teal',
-    base: '#07242c',
-    accent: '#2de2c5',
-    skyTop: 'rgba(10, 68, 88, 0.55)',
-    skyBottom: 'rgba(255, 110, 60, 0.42)',
-    washTop: 'rgba(24, 190, 200, 0.18)',
-    washBottom: 'rgba(255, 110, 60, 0.2)',
-    sunColor: '#ffce7a',
-    horizon: 'rgba(255, 130, 90, 0.45)',
-    palmColor: 'rgba(4, 26, 32, 0.92)',
-    vignette: 0.52,
-    sat: 1.16,
-    contrast: 1.08,
+  neon: {
+    id: 'neon',
+    name: 'Neon',
+    sky: ['#05021a', '#2b0b52', '#b3128b'],
+    sun: '#ff4fd8',
+    sea: '#0a0730',
+    land: '#070419',
+    accent: '#39f5ff',
+    ink: '#eafcff',
+    dark: '#02010c'
   },
   miami: {
     id: 'miami',
-    base: '#26103c',
-    accent: '#ff7ad9',
-    skyTop: 'rgba(90, 30, 140, 0.5)',
-    skyBottom: 'rgba(255, 130, 200, 0.42)',
-    washTop: 'rgba(255, 122, 217, 0.16)',
-    washBottom: 'rgba(40, 14, 90, 0.4)',
-    sunColor: '#ffd0e8',
-    horizon: 'rgba(255, 150, 210, 0.5)',
-    palmColor: 'rgba(26, 8, 42, 0.92)',
-    vignette: 0.55,
-    sat: 1.2,
-    contrast: 1.06,
+    name: 'Miami',
+    sky: ['#0b1b3a', '#5b2a8c', '#ff5f8d'],
+    sun: '#ffe08a',
+    sea: '#0f3c57',
+    land: '#10233b',
+    accent: '#ff5fa2',
+    ink: '#fff0f5',
+    dark: '#050c1f'
   },
+  teal: {
+    id: 'teal',
+    name: 'Teal',
+    sky: ['#021a24', '#0a5a68', '#37b6a3'],
+    sun: '#b8ffe9',
+    sea: '#042a35',
+    land: '#02161d',
+    accent: '#ff7a3d',
+    ink: '#e6fffa',
+    dark: '#010c11'
+  }
 };
 
-export function gradeById(id) {
-  const g = GRADES[id] ?? GRADES.vice;
-  return {
-    ...g,
-    panelTone(i, count) {
-      const warm = i % 2 === 0;
-      return {
-        filter: `saturate(${g.sat}) contrast(${g.contrast}) ${warm ? 'hue-rotate(-6deg)' : 'hue-rotate(6deg)'}`,
-        wash: warm ? g.washTop : g.washBottom,
-        under: g.base,
-      };
-    },
+// Turn a hex or rgb/a color string into an rgba() string with the given alpha.
+// Unknown formats are returned unchanged so callers can fall back to globalAlpha.
+function withAlpha(color, alpha) {
+  const value = String(color || '').trim();
+
+  if (value.charAt(0) === '#') {
+    let hex = value.slice(1);
+    if (hex.length === 3) {
+      hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+    }
+    if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+    }
+  }
+
+  const parts = value.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+  if (parts) {
+    return 'rgba(' + parts[1] + ', ' + parts[2] + ', ' + parts[3] + ', ' + alpha + ')';
+  }
+
+  return value;
+}
+
+// Small deterministic PRNG (mulberry32).
+function mulberry32(seed) {
+  let state = (Number(seed) || 0) >>> 0;
+  return function () {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-/** Atmosphere over the whole cover: sky gradient, sun disc with glow, haze band, palms. */
-export function paintAtmosphere(ctx, w, h, grade, opts) {
-  const bandTop = opts.bandTop ?? h * 0.76;
-  const glow = opts.sun ?? 0.55;
+export function paintSky(ctx, w, h, grade) {
+  if (!ctx || !(w > 0) || !(h > 0)) return;
+
+  const colors = (grade && grade.sky) || GRADES.vice.sky;
+  const sunColor = (grade && grade.sun) || GRADES.vice.sun;
 
   const sky = ctx.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, grade.skyTop);
-  sky.addColorStop(1, grade.skyBottom);
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
+  sky.addColorStop(0, colors[0] || '#000000');
+  sky.addColorStop(0.58, colors[1] || colors[0] || '#000000');
+  sky.addColorStop(1, colors[2] || colors[1] || colors[0] || '#000000');
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, w, h);
 
-  if (glow > 0) {
-    const cx = w * 0.5;
-    const cy = bandTop * 0.62;
-    const r = Math.min(w, h) * 0.4;
-    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    halo.addColorStop(0, hexA(grade.sunColor, 0.34 * glow));
-    halo.addColorStop(0.4, hexA(grade.sunColor, 0.14 * glow));
-    halo.addColorStop(1, hexA(grade.sunColor, 0));
-    ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, w, h);
-    const disc = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.26);
-    disc.addColorStop(0, hexA(grade.sunColor, 0.6 * glow));
-    disc.addColorStop(0.7, hexA(grade.sunColor, 0.34 * glow));
-    disc.addColorStop(1, hexA(grade.sunColor, 0));
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.26, 0, Math.PI * 2);
-    ctx.fillStyle = disc;
-    ctx.fill();
-  }
+  const cx = w * 0.58;
+  const horizon = h * 0.66;
+  const radius = Math.min(w, h) * 0.12;
+  const glowRadius = radius * 3.2;
 
-  const haze = ctx.createLinearGradient(0, bandTop - h * 0.16, 0, h);
-  haze.addColorStop(0, hexA(grade.horizon, 0));
-  haze.addColorStop(1, grade.washBottom);
-  ctx.fillStyle = haze;
-  ctx.fillRect(0, bandTop - h * 0.16, w, h * 0.16 + 1);
-  ctx.restore();
+  const glow = ctx.createRadialGradient(cx, horizon, radius * 0.15, cx, horizon, glowRadius);
+  glow.addColorStop(0, withAlpha(sunColor, 0.6));
+  glow.addColorStop(0.38, withAlpha(sunColor, 0.2));
+  glow.addColorStop(1, withAlpha(sunColor, 0));
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, horizon, glowRadius, 0, Math.PI * 2);
+  ctx.fill();
 
-  if (opts.palms) drawPalms(ctx, w, h, bandTop, grade.palmColor);
-}
-
-/** Original palm silhouettes drawn as vectors: drooping fronds off a curved trunk. */
-function drawPalms(ctx, w, h, groundY, color) {
-  const s = Math.min(w, h);
-  const trees = [
-    { x: w * 0.055, lean: -0.12, scale: 0.2 },
-    { x: w * 0.13, lean: 0.08, scale: 0.14 },
-    { x: w * 0.9, lean: 0.14, scale: 0.22 },
-    { x: w * 0.965, lean: -0.1, scale: 0.13 },
-  ];
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineCap = 'round';
-  for (const t of trees) {
-    const base = groundY + s * 0.06;
-    const top = base - s * t.scale * 2.1;
-    const tip = t.x + s * t.scale * t.lean * 2;
-    ctx.lineWidth = s * t.scale * 0.1;
-    ctx.beginPath();
-    ctx.moveTo(t.x - s * 0.014, base);
-    ctx.quadraticCurveTo(t.x - s * 0.006, (base + top) / 2, tip, top);
-    ctx.quadraticCurveTo(t.x + s * 0.016, (base + top) / 2, t.x + s * 0.014, base);
-    ctx.fill();
-    for (let f = 0; f < 7; f++) {
-      const ang = -Math.PI * 0.95 + (f * Math.PI * 0.95) / 6;
-      const len = s * t.scale * 1.05;
-      const mx = tip + Math.cos(ang) * len * 0.55;
-      const my = top + Math.sin(ang) * len * 0.3;
-      const ex = tip + Math.cos(ang) * len;
-      const ey = top + Math.sin(ang) * len * 0.5 + len * 0.32;
-      ctx.lineWidth = Math.max(2, s * t.scale * 0.075);
-      ctx.beginPath();
-      ctx.moveTo(tip, top);
-      ctx.quadraticCurveTo(mx, my, ex, ey);
-      ctx.stroke();
-    }
-  }
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = sunColor;
+  ctx.beginPath();
+  ctx.arc(cx, horizon, radius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
-function hexA(hex, a) {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+// One tapered frond: out along a quadratic curve, back along a second one.
+function palmFrond(ctx, x, y, ctrlX, ctrlY, tipX, tipY, width) {
+  const midX = 0.25 * x + 0.5 * ctrlX + 0.25 * tipX;
+  const midY = 0.25 * y + 0.5 * ctrlY + 0.25 * tipY;
+  const dx = tipX - x;
+  const dy = tipY - y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const offsetX = (-dy / len) * width;
+  const offsetY = (dx / len) * width;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(ctrlX, ctrlY, tipX, tipY);
+  ctx.quadraticCurveTo(midX + offsetX, midY + offsetY, x, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function palmTree(ctx, x, baseY, size, rand, color) {
+  const lean = (rand() - 0.5) * size * 0.55;
+  const topX = x + lean;
+  const topY = baseY - size;
+  const trunkW = Math.max(1.1, size * 0.075);
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x - trunkW, baseY);
+  ctx.quadraticCurveTo(x + lean * 0.35 - trunkW * 0.6, baseY - size * 0.55, topX - trunkW * 0.35, topY);
+  ctx.lineTo(topX + trunkW * 0.35, topY);
+  ctx.quadraticCurveTo(x + lean * 0.65 + trunkW * 0.6, baseY - size * 0.55, x + trunkW, baseY);
+  ctx.closePath();
+  ctx.fill();
+
+  const fronds = 6 + Math.floor(rand() * 3);
+  for (let i = 0; i < fronds; i++) {
+    const t = fronds === 1 ? 0.5 : i / (fronds - 1);
+    const angle = -Math.PI / 2 + (t - 0.5) * Math.PI * 1.5;
+    const length = size * (0.55 + rand() * 0.35);
+    const tipX = topX + Math.cos(angle) * length;
+    const tipY = topY + Math.sin(angle) * length * 0.7 + size * 0.2;
+    const ctrlX = topX + Math.cos(angle) * length * 0.5;
+    const ctrlY = topY + Math.sin(angle) * length * 0.35 - size * 0.08;
+    palmFrond(ctx, topX, topY, ctrlX, ctrlY, tipX, tipY, size * 0.055);
+  }
+}
+
+export function drawPalms(ctx, w, h, grade, seed) {
+  if (!ctx || !(w > 0) || !(h > 0)) return;
+
+  const color = (grade && grade.dark) || GRADES.vice.dark;
+  const rand = mulberry32(seed);
+  const trees = 3 + Math.floor(rand() * 3);
+
+  ctx.save();
+  for (let i = 0; i < trees; i++) {
+    const x = w * (0.08 + rand() * 0.84);
+    const baseY = h * (0.96 + rand() * 0.06);
+    const size = Math.min(w, h) * (0.1 + rand() * 0.08);
+    palmTree(ctx, x, baseY, size, rand, color);
+  }
+  ctx.restore();
 }

@@ -1,117 +1,102 @@
-// Texture behind the lettering band. CONTRACT (do not change signatures):
-//   PATTERNS: object of id -> { id, name } (at least none, rays, dots, grid)
-//   drawBandPattern(ctx, w, h, band, grade, kind): paints texture across the band area
-//   [h-band, h], subtle, behind the text. Nothing for 'none' or unknown.
-// All three marks are quiet enough to sit behind the title: alpha stays below 0.18.
+// Subtle textures painted behind the caption band lettering.
+// Self-contained: no imports, no network, no dependencies.
 
 export const PATTERNS = {
-  none: { id: 'none', name: 'Plain' },
-  rays: { id: 'rays', name: 'Sunburst' },
-  dots: { id: 'dots', name: 'Halftone' },
-  grid: { id: 'grid', name: 'Night grid' },
+  none: { id: 'none', name: 'None' },
+  rays: { id: 'rays', name: 'Rays' },
+  dots: { id: 'dots', name: 'Dots' },
+  grid: { id: 'grid', name: 'Grid' }
 };
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
-/** Accent with alpha; the fallback keeps the helper safe if a grade is missing its accent. */
-function accentA(hex, alpha) {
-  const h = String(hex ?? '#ff2e88').replace('#', '');
-  if (h.length !== 6) return `rgba(255, 46, 136, ${alpha})`;
-  const n = parseInt(h, 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
+function drawRays(ctx, w, h, band, accent) {
+  const originX = w / 2;
+  const originY = h + band * 0.85;
+  const radius = Math.max(w, band) * 2.4 + h;
+  const count = 30;
+  const start = -Math.PI * 0.92;
+  const end = -Math.PI * 0.08;
+  const step = (end - start) / count;
 
-export function drawBandPattern(ctx, w, h, band, grade, kind) {
-  if (!ctx || !w || !h || !band || band <= 0 || !grade) return;
-  if (kind === 'none' || !Object.prototype.hasOwnProperty.call(PATTERNS, kind)) return;
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, h - band, w, band);
-  ctx.clip();
-  if (kind === 'rays') drawRays(ctx, w, h, band, grade);
-  else if (kind === 'dots') drawDots(ctx, w, h, band, grade);
-  else if (kind === 'grid') drawGrid(ctx, w, h, band, grade);
+  ctx.globalAlpha = 0.14;
+  ctx.fillStyle = accent;
+  for (let i = 0; i < count; i += 1) {
+    const angle = start + step * (i + 0.5);
+    const half = step * (i % 2 === 0 ? 0.34 : 0.22);
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(originX + Math.cos(angle - half) * radius, originY + Math.sin(angle - half) * radius);
+    ctx.lineTo(originX + Math.cos(angle + half) * radius, originY + Math.sin(angle + half) * radius);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.restore();
 }
 
-/** Wide wedges fan out from a point just below the band, like a printed sunburst. */
-function drawRays(ctx, w, h, band, grade) {
-  const top = h - band;
-  const ox = w * 0.5;
-  const oy = h + band * 0.22;
-  const reach = Math.hypot(w, band * 1.7) * 1.5;
-  const count = 26;
-  for (let i = 0; i < count; i++) {
-    const a0 = Math.PI * (1.03 + (0.94 * i) / count);
-    const a1 = Math.PI * (1.03 + (0.94 * (i + 1)) / count);
-    ctx.beginPath();
-    ctx.moveTo(ox, oy);
-    ctx.lineTo(ox + Math.cos(a0) * reach, oy + Math.sin(a0) * reach);
-    ctx.lineTo(ox + Math.cos(a1) * reach, oy + Math.sin(a1) * reach);
-    ctx.closePath();
-    ctx.fillStyle = i % 2 === 0
-      ? accentA(grade.accent, 0.075)
-      : 'rgba(255, 228, 196, 0.038)';
-    ctx.fill();
-  }
-  const bloom = ctx.createRadialGradient(ox, oy, 0, ox, oy, band * 0.95);
-  bloom.addColorStop(0, accentA(grade.accent, 0.13));
-  bloom.addColorStop(0.55, accentA(grade.accent, 0.05));
-  bloom.addColorStop(1, accentA(grade.accent, 0));
-  ctx.fillStyle = bloom;
-  ctx.fillRect(0, top, w, band);
-}
-
-/** Halftone dots grow and brighten toward the foot of the cover. */
-function drawDots(ctx, w, h, band, grade) {
-  const top = h - band;
-  const step = clamp(band * 0.105, 9, 26);
-  const rows = Math.ceil(band / step) + 1;
-  const cols = Math.ceil(w / step) + 1;
-  for (let row = 0; row < rows; row++) {
-    const y = top + row * step;
-    const t = row / Math.max(1, rows - 1);
-    const radius = step * (0.1 + 0.21 * t);
-    ctx.fillStyle = accentA(grade.accent, 0.02 + 0.135 * t * t);
-    const shift = (row % 2) * step * 0.5;
-    for (let col = -1; col <= cols; col++) {
+function drawDots(ctx, w, bandTop, band, ink) {
+  const spacing = 16;
+  const maxRadius = spacing * 0.46;
+  ctx.save();
+  ctx.fillStyle = ink;
+  for (let row = 0, y = bandTop + spacing * 0.5; y < bandTop + band + spacing; row += 1, y += spacing) {
+    const t = clamp((y - bandTop) / band, 0, 1);
+    const radius = maxRadius * (0.12 + 0.88 * t);
+    if (radius < 0.4) continue;
+    ctx.globalAlpha = 0.14 * (0.18 + 0.82 * t);
+    const offset = row % 2 === 0 ? 0 : spacing / 2;
+    for (let x = offset; x < w + spacing; x += spacing) {
       ctx.beginPath();
-      ctx.arc(col * step + shift, y, radius, 0, Math.PI * 2);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
   }
+  ctx.restore();
 }
 
-/** A faint measurement grid: fine rules, brighter majors and small intersection nodes. */
-function drawGrid(ctx, w, h, band, grade) {
-  const top = h - band;
-  const sx = clamp(band * 0.16, 14, 44);
-  const sy = clamp(band * 0.14, 12, 36);
-  const originX = w * 0.5;
+function drawGrid(ctx, w, bandTop, band, ink) {
+  const spacing = 28;
+  ctx.save();
+  ctx.strokeStyle = ink;
+  ctx.globalAlpha = 0.1;
   ctx.lineWidth = 1;
-  for (let x = originX % sx; x <= w + sx; x += sx) {
-    const index = Math.round((x - originX) / sx);
-    const major = index % 4 === 0;
-    ctx.strokeStyle = accentA(grade.accent, major ? 0.125 : 0.05);
-    ctx.beginPath();
-    ctx.moveTo(Math.round(x) + 0.5, top);
-    ctx.lineTo(Math.round(x) + 0.5, h);
-    ctx.stroke();
+  ctx.beginPath();
+  for (let x = spacing; x < w; x += spacing) {
+    ctx.moveTo(x + 0.5, bandTop);
+    ctx.lineTo(x + 0.5, bandTop + band);
   }
-  for (let y = h - sy; y >= top - sy; y -= sy) {
-    const major = Math.round((h - y) / sy) % 4 === 0;
-    ctx.strokeStyle = accentA(grade.accent, major ? 0.12 : 0.048);
-    ctx.beginPath();
-    ctx.moveTo(0, Math.round(y) + 0.5);
-    ctx.lineTo(w, Math.round(y) + 0.5);
-    ctx.stroke();
+  for (let y = bandTop + spacing; y < bandTop + band; y += spacing) {
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(w, y + 0.5);
   }
-  ctx.fillStyle = accentA(grade.accent, 0.15);
-  for (let x = originX % (sx * 4); x <= w; x += sx * 4) {
-    for (let y = h - sy * 4; y >= top; y -= sy * 4) {
-      ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 2, 2);
-    }
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawBandPattern(ctx, w, h, band, grade, kind) {
+  if (!ctx || !(w > 0) || !(h > 0) || !(band > 0)) return;
+  if (!kind || !PATTERNS[kind] || kind === 'none') return;
+
+  const bandTop = h - band;
+  const palette = grade || {};
+  const accent = palette.accent || '#ff9b54';
+  const ink = palette.ink || '#0b0b14';
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, bandTop, w, band);
+  ctx.clip();
+
+  if (kind === 'rays') {
+    drawRays(ctx, w, h, band, accent);
+  } else if (kind === 'dots') {
+    drawDots(ctx, w, bandTop, band, ink);
+  } else if (kind === 'grid') {
+    drawGrid(ctx, w, bandTop, band, ink);
   }
+
+  ctx.restore();
 }

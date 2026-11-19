@@ -1,12 +1,10 @@
 # Sunset Strip — Vice cover art from your own photos
 
-Turn your photos and a caption into multi-panel GTA-style poster covers, graded in sunset and neon tones, and export a PNG at 1080x1080, 1080x1350 or 1920x1080. Static files, no build step, no network.
+Turn your photos and a caption into multi-panel GTA-style poster covers, graded in sunset and neon tones, and export a PNG at 1080x1080, 1080x1350 or 1920x1080. A static offline web app: open index.html in a browser or run `node serve.ts`, no build step and no network required.
 
 [![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
 [![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
 [![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
-
-Built for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01).
 
 ## Features
 
@@ -20,17 +18,13 @@ Built for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cov
 
 ## How to use
 
-node serve.ts
+Run `node serve.ts` and open http://localhost:8080. Add photos, edit the caption, pick a layout and grade, then press Export PNG.
 
-Open http://localhost:8080, add your photos, edit the title, subtitle and kicker, pick a layout, grade and lettering style, then press Export PNG.
-
-## Hand-in
-
-mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+**Hand-in:** `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts`
 
 ## Requirements
 
-Node.js 22.18 or later for main.ts and serve.ts; any current desktop browser.
+Node.js 22.18 or later.
 
 ## License
 
