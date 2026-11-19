@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunset Strip — Vice cover art maker</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div>
+      <h1>Sunset Strip</h1>
+      <p class="tag">Vice-style cover art from your own photos</p>
+    </div>
+  </div>
+  <div class="sizes" role="group" aria-label="Export size">
+    <button type="button" class="size is-on" data-size="1080x1080">Square<small>1080 &times; 1080</small></button>
+    <button type="button" class="size" data-size="1080x1350">Poster<small>1080 &times; 1350</small></button>
+    <button type="button" class="size" data-size="1920x1080">Wide<small>1920 &times; 1080</small></button>
+    <button type="button" id="export" class="export">Export PNG</button>
+  </div>
+</header>
+
+<main class="studio">
+  <section class="stage" aria-label="Live preview">
+    <div class="frame">
+      <canvas id="cover" width="1080" height="1080" aria-label="Cover preview"></canvas>
+      <div class="hint" id="hint">Drop photos anywhere &middot; drag a panel to move it &middot; scroll to zoom</div>
+    </div>
+    <div class="deck" id="deck" aria-label="Panels"></div>
+  </section>
+
+  <aside class="panel" aria-label="Editor">
+    <div class="block">
+      <h2>Photos</h2>
+      <label class="drop" id="drop">
+        <input id="photo" type="file" accept="image/*" multiple hidden>
+        <strong>Add photos</strong>
+        <span>1 photo fills every panel, or one per panel</span>
+      </label>
+      <div class="row">
+        <button type="button" id="shuffle" class="ghost">Shuffle panels</button>
+        <button type="button" id="reset" class="ghost">Recenter all</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>Lettering</h2>
+      <label class="field">Title
+        <input id="title" type="text" maxlength="34" value="SUNSET STRIP">
+      </label>
+      <label class="field">Subtitle
+        <input id="subtitle" type="text" maxlength="48" value="VICE CITY STORIES &middot; VOL. 01">
+      </label>
+      <label class="field">Kicker
+        <input id="kicker" type="text" maxlength="26" value="THE COAST IS YOURS">
+      </label>
+      <div class="row">
+        <label class="field slim">Style
+          <select id="lettering">
+            <option value="slab">Slab outline</option>
+            <option value="chrome">Chrome</option>
+            <option value="neon">Neon tube</option>
+            <option value="stencil">Stencil</option>
+          </select>
+        </label>
+        <label class="field slim">Color
+          <select id="ink">
+            <option value="white">White</option>
+            <option value="gold">Mango gold</option>
+            <option value="pink">Hot pink</option>
+            <option value="mint">Mint</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">Title size <input id="titlesize" type="range" min="70" max="130" value="100" step="1"></label>
+    </div>
+
+    <div class="block">
+      <h2>Poster</h2>
+      <label class="field slim">Panel layout
+        <select id="layout">
+          <option value="grid4">Four panels</option>
+          <option value="spotlight">Spotlight (1 big, 2 small)</option>
+          <option value="strip3">Strip of three</option>
+          <option value="cinema">Full bleed</option>
+          <option value="duo">Duo split</option>
+        </select>
+      </label>
+      <label class="field slim">Color grade
+        <select id="grade">
+          <option value="vice">Vice sunset</option>
+          <option value="neon">Neon midnight</option>
+          <option value="gold">Golden hour</option>
+          <option value="teal">Teal &amp; orange</option>
+          <option value="miami">Miami dusk</option>
+        </select>
+      </label>
+      <div class="row toggles">
+        <label class="check"><input id="palms" type="checkbox" checked> Palms</label>
+        <label class="check"><input id="grain" type="checkbox" checked> Grain</label>
+        <label class="check"><input id="badge" type="checkbox" checked> Badge</label>
+      </div>
+      <div class="row">
+        <label class="field slim">Panel frame
+          <select id="frame"><option value="none">None</option></select>
+        </label>
+        <label class="field slim">Band texture
+          <select id="pattern"><option value="none">Plain</option></select>
+        </label>
+      </div>
+      <div class="row ideas" id="ideas"></div>
+      <label class="field">Grain <input id="grainamt" type="range" min="0" max="100" value="42"></label>
+      <label class="field">Sun glow <input id="glow" type="range" min="0" max="100" value="55"></label>
+    </div>
+
+    <p class="status" id="status" role="status">Ready</p>
+  </aside>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
