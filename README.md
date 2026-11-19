@@ -6,7 +6,7 @@
 [![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
 [![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
 
-Made for the make.fun GTA 6 cover art bounty, linking to https://make.fun/bounty/gta6-cover-art-01.
+Made for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01), linking to https://make.fun/bounty/gta6-cover-art-01.
 
 ## Features
 
@@ -27,6 +27,10 @@ node serve.ts
 1. Open http://localhost:8080 in your browser.
 2. Add your photos (one per panel) and edit the caption.
 3. Click **Export PNG** to download the poster in the supported sizes.
+
+## Requirements
+
+Node.js 22+ to run main.ts and serve.ts, any modern desktop browser
 
 ## License
 
