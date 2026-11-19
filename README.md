@@ -1,36 +1,36 @@
-# Sunset Strip Cover Art
+# Sunset Strip — Vice cover art from your own photos
 
-> Turn your own photos and a caption into Vice‑style multi‑panel poster covers and export PNG post sizes 1080×1080, 1080×1350, 1920×1080 — a fully offline static app.
+Turn your photos and a caption into multi-panel GTA-style poster covers, graded in sunset and neon tones, and export a PNG at 1080x1080, 1080x1350 or 1920x1080. Static files, no build step, no network.
 
 [![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
 [![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
 [![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
 
-Made for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01), linking to https://make.fun/bounty/gta6-cover-art-01.
+Built for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01).
 
 ## Features
 
-- Four panel layouts (multi‑panel poster)
-- Five sunset/neon colour grades
-- Bold stacked lettering styles
-- Optional frames and badges
-- Drag‑and‑drop per panel
-- PNG export at 1080×1080, 1080×1350, 1920×1080
-- Fully offline – no network or build step
+- Five panel layouts: four-up grid, spotlight, three-strip, cinema and duo.
+- Five colour grades with atmosphere and palm silhouettes.
+- Bold lettering in slab, chrome, neon and stencil styles, four inks.
+- Decorative panel frames, band textures and a poster badge, all drawn on canvas.
+- Drag and zoom each photo inside its panel; one photo can fill every panel.
+- Sample photos included, drawn for this project and free to use.
+- Exports PNG at 1080x1080, 1080x1350 and 1920x1080, at full render size.
 
-## How to Use
+## How to use
 
-```sh
 node serve.ts
-```
 
-1. Open http://localhost:8080 in your browser.
-2. Add your photos (one per panel) and edit the caption.
-3. Click **Export PNG** to download the poster in the supported sizes.
+Open http://localhost:8080, add your photos, edit the title, subtitle and kicker, pick a layout, grade and lettering style, then press Export PNG.
+
+## Hand-in
+
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 ## Requirements
 
-Node.js 22+ to run main.ts and serve.ts, any modern desktop browser
+Node.js 22.18 or later for main.ts and serve.ts; any current desktop browser.
 
 ## License
 
