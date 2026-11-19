@@ -6,7 +6,7 @@
 [![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
 [![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
 
-Made for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01).
+Made for the make.fun GTA 6 cover art bounty, linking to https://make.fun/bounty/gta6-cover-art-01.
 
 ## Features
 
