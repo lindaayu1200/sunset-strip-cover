@@ -75,7 +75,7 @@ function makeEntry(src, revoke) {
 }
 
 function sampleEntry(name) {
-  return makeEntry('samples/' + name + '.jpg');
+  return makeEntry('vendor/samples/' + name + '.jpg');
 }
 
 const state = {
