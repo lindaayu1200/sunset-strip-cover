@@ -2,9 +2,11 @@
 
 > Turn your own photos and a caption into Vice‑style multi‑panel poster covers and export PNG post sizes 1080×1080, 1080×1350, 1920×1080 — a fully offline static app.
 
-![make.fun badge](https://make.fun/badge/gta6-cover-art-01.svg)
-![rank badge](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)
-![reward badge](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)
+[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
+[![rank](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
+[![reward](https://make.fun/badge/gta6-cover-art-01/lindaayu1200/sunset-strip-cover/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
+
+Made for the [make.fun GTA 6 cover art bounty](https://make.fun/bounty/gta6-cover-art-01).
 
 ## Features
 
