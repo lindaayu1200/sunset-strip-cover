@@ -1,1 +1,6 @@
+# .gitignore: ignore local build and editor artifacts
 out/
+node_modules/
+.DS_Store
+*.log
+.env
