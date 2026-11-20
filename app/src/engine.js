@@ -157,8 +157,9 @@ function paintBand(ctx, w, h, band, grade, state) {
   ctx.fillRect(0, top, w, band);
 
   drawBandPattern(ctx, w, h, band, grade, state.pattern);
-  if (state.badge) drawBadge(ctx, w, h, band, grade, state.badgeStyle);
 
+  // The badge is painted in renderCover, outside this clip: it sits above the
+  // band, so drawing it here would clip it away entirely.
   drawLettering(ctx, w, h, band, grade, {
     title: state.title,
     subtitle: state.subtitle,
@@ -243,7 +244,7 @@ export function renderCover(canvas, w, h, state) {
     ctx.restore();
   }
 
-  // (d) Caption band: gradient, texture, badge, lettering.
+  // (d) Caption band: gradient, texture, lettering.
   paintBand(ctx, w, h, band, grade, options);
 
   // (e) Subtle grain over everything.
@@ -256,6 +257,30 @@ export function renderCover(canvas, w, h, state) {
   ctx.lineWidth = edge;
   ctx.strokeRect(edge / 2, edge / 2, w - edge, h - edge);
   ctx.restore();
+
+  // (g) Vignette: clear at the centre, grade.dark at 45% in the corners.
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const cornerRadius = Math.hypot(centerX, centerY);
+  const vignette = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, cornerRadius);
+  vignette.addColorStop(0, withAlpha(grade.dark, 0));
+  vignette.addColorStop(1, withAlpha(grade.dark, 0.45));
+  ctx.save();
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  // (h) Two-pixel inner frame in the grade's ink.
+  ctx.save();
+  ctx.strokeStyle = withAlpha(grade.ink, 0.3);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, w - 2, h - 2);
+  ctx.restore();
+
+  // (i) Badge last, unclipped: it lives just above the lettering band at the
+  // right edge, so panels, the band clip and the corner vignette must not
+  // cover it. Shared by the seal, classic and ribbon styles.
+  if (options.badge) drawBadge(ctx, w, h, band, grade, options.badgeStyle);
 
   return canvas;
 }

@@ -2,7 +2,8 @@
 
 export const BADGES = {
   classic: { id: 'classic', name: 'Classic' },
-  ribbon: { id: 'ribbon', name: 'Ribbon' }
+  ribbon: { id: 'ribbon', name: 'Ribbon' },
+  seal: { id: 'seal', name: 'Seal' }
 };
 
 const FONT = '"Bebas Neue", "Arial Narrow", sans-serif';
@@ -122,6 +123,66 @@ function drawRibbon(ctx, w, h, band, color) {
   ctx.restore();
 }
 
+// A circular postmark-style seal: dashed outer ring, solid inner ring, and the
+// year split across the top and bottom of the stamp.
+function drawSeal(ctx, w, h, band, color) {
+  const short = Math.min(w, h);
+  const diameter = Math.max(20, Math.round(short * 0.06));
+  const pad = Math.max(4, Math.round(short * 0.018));
+  const gap = Math.max(2, Math.round(short * 0.012));
+  const bottom = Math.max(diameter + pad, band > 0 ? h - band - gap : h - pad);
+  const cx = w - pad - diameter / 2;
+  const cy = bottom - diameter / 2;
+  const radius = diameter / 2;
+  const tilt = (-6 * Math.PI) / 180;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(tilt);
+
+  // A dark disc backs the stamp so the rings stay legible over any photo,
+  // panel or grade instead of disappearing into a bright part of the cover.
+  ctx.save();
+  ctx.globalAlpha = 0.78;
+  ctx.fillStyle = color.dark;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  const outerWidth = Math.max(1, diameter * 0.018);
+  ctx.strokeStyle = color.accent;
+  ctx.lineWidth = outerWidth;
+  ctx.setLineDash([Math.max(2, diameter * 0.04), Math.max(2, diameter * 0.03)]);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - outerWidth / 2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const innerWidth = Math.max(1, diameter * 0.02);
+  ctx.lineWidth = innerWidth;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.62, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const midPx = Math.max(8, Math.round(diameter * 0.16));
+  ctx.fillStyle = color.accent;
+  ctx.font = `700 ${midPx}px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ORIGINAL', 0, 0);
+
+  const year = String(new Date().getFullYear());
+  const split = Math.ceil(year.length / 2);
+  const yearPx = Math.max(6, Math.round(diameter * 0.09));
+  ctx.font = `700 ${yearPx}px ${FONT}`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(year.slice(0, split), 0, -radius * 0.81);
+  ctx.fillText(year.slice(split), 0, radius * 0.81);
+
+  ctx.restore();
+}
+
 export function drawBadge(ctx, w, h, band, grade, styleId) {
   if (!ctx || !(w > 0) || !(h > 0)) return;
   if (!Object.prototype.hasOwnProperty.call(BADGES, styleId)) return;
@@ -136,5 +197,6 @@ export function drawBadge(ctx, w, h, band, grade, styleId) {
   ctx.save();
   if (styleId === 'classic') drawClassic(ctx, w, h, bandH, color);
   else if (styleId === 'ribbon') drawRibbon(ctx, w, h, bandH, color);
+  else if (styleId === 'seal') drawSeal(ctx, w, h, bandH, color);
   ctx.restore();
 }

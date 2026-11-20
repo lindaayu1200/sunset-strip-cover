@@ -96,7 +96,7 @@ const state = {
   palms: true,
   grain: true,
   badge: true,
-  badgeStyle: 'classic',
+  badgeStyle: 'seal',
   frame: 'none',
   pattern: 'none',
   idea: '',

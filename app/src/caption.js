@@ -105,6 +105,21 @@ function punchStencilGaps(target, centerY, size, width, height, topLimit) {
   target.restore();
 }
 
+function spacedWidth(ctx, text, spacing) {
+  const chars = Array.from(text);
+  if (!chars.length) return 0;
+  let total = 0;
+  for (let i = 0; i < chars.length; i += 1) total += ctx.measureText(chars[i]).width + spacing;
+  return total - spacing;
+}
+
+function billingWords(text) {
+  return String(text == null ? '' : text)
+    .toUpperCase()
+    .split(/[\s\u00b7]+/)
+    .filter(Boolean);
+}
+
 export function drawLettering(ctx, w, h, band, grade, opts) {
   if (!ctx || !(w > 0) || !(h > 0) || !(band > 0)) return;
 
@@ -139,6 +154,7 @@ export function drawLettering(ctx, w, h, band, grade, opts) {
   const kickerY = bandTop + band * 0.17;
   const titleY = bandTop + band * 0.64;
   const subtitleY = bandTop + band * 0.88;
+  let subtitleBottom = subtitleY + subSize * 0.2;
 
   ctx.save();
   ctx.beginPath();
@@ -265,6 +281,7 @@ export function drawLettering(ctx, w, h, band, grade, opts) {
     const textWidth = ctx.measureText(subtitle).width;
     const half = Math.min(w * 0.42, textWidth / 2 + subSize * 0.9);
     const underlineY = Math.min(h - 2, subtitleY + subSize * 0.42);
+    subtitleBottom = Math.max(subtitleBottom, underlineY + 2);
     ctx.strokeStyle = accent;
     ctx.globalAlpha = 0.75;
     ctx.lineWidth = 1;
@@ -278,6 +295,24 @@ export function drawLettering(ctx, w, h, band, grade, opts) {
     ctx.moveTo(centerX + half, underlineY - 2);
     ctx.lineTo(centerX + half, underlineY + 2);
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // Tiny billing block pinned to the bottom of the band, always below the subtitle.
+  const billingLine = ['A STRIP PICTURE']
+    .concat(billingWords(kicker), billingWords(subtitle), ['RATED VICE'])
+    .join(' \u00b7 ');
+  const billingPx = Math.max(8, Math.round(band * 0.03));
+  const billingSpacing = 2;
+  const billingY = h - Math.max(3, Math.round(band * 0.02));
+  if (billingY - billingPx >= subtitleBottom + 2) {
+    ctx.save();
+    ctx.font = `700 ${billingPx}px 'Bebas Neue', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = palette.ink || '#fff4e8';
+    ctx.globalAlpha = 0.75;
+    drawSpacedText(ctx, billingLine, centerX, billingY, billingSpacing);
     ctx.restore();
   }
 
